@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
+    <title>Depas — búsqueda compartida</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <section class="auth-screen" id="auth-screen" hidden>
+      <div class="auth-card">
+        <a class="brand" href="#" aria-label="Depas">
+          <span class="brand-mark">D</span>
+          <span>depas<span class="brand-period">.</span></span>
+        </a>
+        <p class="eyebrow">SU BÚSQUEDA COMPARTIDA</p>
+        <h1>Un hogar, dos opiniones.</h1>
+        <p class="auth-copy" id="auth-message">Inicien sesión con un correo autorizado para ver y actualizar la lista compartida.</p>
+        <form id="auth-form">
+          <label class="field-label">Correo electrónico<input name="email" type="email" autocomplete="email" required placeholder="ustedes@correo.com"></label>
+          <button class="button button-primary button-full" type="submit">Enviar enlace de acceso <span>→</span></button>
+        </form>
+        <p class="auth-footnote">Solo las cuentas autorizadas pueden consultar o editar los inmuebles.</p>
+      </div>
+    </section>
+    <div class="app-shell" id="app-shell" hidden>
+      <aside class="sidebar">
+        <a class="brand" href="#" data-view="dashboard" aria-label="Depas, inicio">
+          <span class="brand-mark">D</span>
+          <span>depas<span class="brand-period">.</span></span>
+        </a>
+        <p class="sidebar-caption">SU PRÓXIMO HOGAR</p>
+        <nav class="navigation" aria-label="Navegación principal">
+          <button class="nav-link active" data-view="dashboard"><span class="nav-icon">⌂</span> Resumen</button>
+          <button class="nav-link" data-view="catalog"><span class="nav-icon">▦</span> Inmuebles <span class="nav-count" id="nav-count">0</span></button>
+          <button class="nav-link" data-view="compare"><span class="nav-icon">↔</span> Comparar</button>
+          <button class="nav-link" data-view="voting"><span class="nav-icon">↗</span> Calificar</button>
+          <button class="nav-link" data-view="top"><span class="nav-icon">★</span> Top 3</button>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="couple-card">
+            <span class="avatar avatar-b">B</span>
+            <span class="avatar avatar-c">C</span>
+            <div><strong>Benja + Caro</strong><small>Buscando hogar</small></div>
+          </div>
+          <div class="sidebar-note">Un buen depa se encuentra mejor en equipo.</div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="breadcrumb">CDMX <span>/</span> <strong id="current-section">Resumen</strong></div>
+          <div class="topbar-actions">
+            <label class="button button-quiet import-button" for="import-file">Importar JSON</label>
+            <input id="import-file" type="file" accept="application/json,.json" hidden>
+            <button class="button button-quiet" id="export-button" type="button">Exportar JSON <span aria-hidden="true">↓</span></button>
+            <button class="button button-quiet" id="logout-button" type="button" hidden>Cerrar sesión</button>
+            <button class="button button-primary button-small" data-view="form" type="button"><span>＋</span> Agregar depa</button>
+          </div>
+        </header>
+
+        <div id="notice" class="notice" role="status" hidden></div>
+        <section id="view-root" class="view-root" aria-live="polite"></section>
+      </main>
+    </div>
+  </body>
+</html>
