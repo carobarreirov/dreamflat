@@ -1,33 +1,43 @@
 # Depas CDMX
 
-Aplicación estática para registrar y comparar opciones de renta entre Benja y Caro.
+Aplicación para registrar, calificar y comparar opciones de renta entre Benja y Caro. La interfaz es estática; para compartir cambios entre celulares se conecta a Supabase con acceso privado por correo.
 
-## Abrir la aplicación
-
-Desde la carpeta del proyecto, inicien un servidor local:
+## Probar localmente
 
 ```sh
 python3 -m http.server 8000
 ```
 
-Después visiten <http://localhost:8000>. Se necesita el servidor porque el navegador restringe la lectura de archivos JSON al abrir `index.html` directamente.
+Visiten <http://localhost:8000>. Con `config.js` sin credenciales, los cambios se guardan en el almacenamiento local de ese navegador. No se comparten entre dispositivos.
 
-## Datos y respaldo
+## Activar la lista compartida
 
-- Los cambios se guardan automáticamente en el almacenamiento local del navegador.
-- **Exportar JSON** descarga `inmuebles.json`; pueden reemplazar con ese archivo `data/inmuebles.json` para actualizar la copia fuente.
-- **Importar JSON** reemplaza los datos del navegador con el contenido del archivo seleccionado.
-- Los datos locales de un navegador no se comparten automáticamente entre Benja y Caro. Intercambien el JSON exportado para sincronizarlo.
-- Las calificaciones son individuales (1–7); **Top 3** muestra las mejores calificadas y usa el promedio de quienes ya calificaron.
-- En **Inmuebles**, pulsen **Comparar** en las opciones que quieran poner lado a lado. También pueden elegirlas desde la vista **Comparar**; admite hasta cuatro opciones.
-- La comparación incluye total mensual, costo estimado para entrar, espacios, amenidades, disponibilidad y calificaciones.
+1. Creen un proyecto de Supabase.
+2. En su SQL Editor, ejecuten [data/schema.sql](data/schema.sql).
+3. En el mismo SQL Editor, autoricen solo sus dos correos. Sustituyan los marcadores por las direcciones acordadas y no publiquen esta consulta:
 
-## Uso en celular
+   ```sql
+   insert into public.allowed_users (email)
+   values ('CORREO_DE_CARO'), ('CORREO_DE_BENJA')
+   on conflict (email) do nothing;
+   ```
 
-La interfaz se adapta a pantallas pequeñas. Para que Benja pueda abrirla desde WhatsApp, primero hay que publicarla en un hosting estático; `localhost` solo funciona en el dispositivo donde corre el servidor. El almacenamiento seguirá siendo propio de cada navegador, así que para compartir cambios entre ambos tendrán que intercambiar el JSON.
+4. En Supabase, agreguen `https://carobarreirov.github.io/dreamflat/` como **Site URL** y URL permitida de redirección para los enlaces mágicos.
+5. En GitHub, vayan a **Settings → Pages** y elijan GitHub Actions como fuente.
+6. En **Settings → Secrets and variables → Actions**, creen los secretos `SUPABASE_URL` y `SUPABASE_ANON_KEY` con los valores del proyecto de Supabase. Usen la clave pública `anon`/publishable, nunca la `service_role`.
+7. Publiquen la rama `main`. El workflow de [pages.yml](.github/workflows/pages.yml) construye la configuración sin guardar las claves en el repositorio y despliega la página.
 
-## Datos guardados
+Sin los dos secretos, GitHub Pages mostrará un aviso de configuración y no conectará a la base. La tabla activa RLS y solo los correos incluidos en `allowed_users` pueden consultar o modificar sus datos. Los correos autorizados no se guardan en este repositorio.
 
-Cada inmueble conserva ubicación, renta y mantenimiento, características, amenidades, gastos iniciales, disponibilidad, estatus y seguimiento, contacto, notas y calificaciones.
+Para mover los inmuebles que ya estén guardados localmente a Supabase, exporten el JSON desde el modo local e impórtenlo desde la aplicación publicada; la importación reemplaza la lista compartida.
 
-El catálogo postal local se usa para sugerir alcaldía y colonias al ingresar el CP. Si no encuentra una coincidencia, se pueden capturar ambos campos manualmente. El origen y licencia de esos datos están en [data/NOTICE.txt](data/NOTICE.txt).
+## Uso
+
+- **Inmuebles** permite filtrar, ordenar, agrupar, editar y seleccionar opciones para comparar.
+- **Comparar** muestra de 2 a 4 opciones lado a lado, incluido el costo mensual y una estimación del gasto inicial.
+- **Top 3** ordena las mejores calificadas. Si solo una persona calificó, usa esa calificación hasta recibir la otra.
+- **Calificar** guarda una calificación de Benja y otra de Caro, de 1 a 7.
+- **Exportar/Importar JSON** sirve como respaldo y para reemplazar la lista compartida.
+- Los cambios se reflejan en vivo en ambas sesiones.
+
+La vista es adaptable a celular; el catálogo postal local sugiere alcaldía y colonias a partir del CP. Si no encuentra una coincidencia, se pueden capturar manualmente. El origen y licencia del catálogo están en [data/NOTICE.txt](data/NOTICE.txt).

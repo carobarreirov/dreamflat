@@ -629,6 +629,19 @@ function renderCurrentView() {
   if (view === "compare") renderComparison();
 }
 
+function loadSupabaseLibrary() {
+  if (window.supabase?.createClient) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    script.onload = () => window.supabase?.createClient
+      ? resolve()
+      : reject(new Error("La biblioteca de Supabase no está disponible."));
+    script.onerror = () => reject(new Error("No se pudo descargar la biblioteca de Supabase."));
+    document.head.append(script);
+  });
+}
+
 function handleRootClick(event) {
   const viewButton = event.target.closest("[data-view]");
   if (viewButton) {
@@ -709,7 +722,7 @@ function exportProperties() {
   link.download = "inmuebles.json";
   link.click();
   URL.revokeObjectURL(url);
-  showNotice("JSON exportado. Guárdenlo en data/inmuebles.json para actualizar el archivo fuente.", "success");
+  showNotice("JSON exportado como respaldo.", "success");
 }
 
 async function importProperties(file) {
@@ -802,6 +815,7 @@ async function activateSession(session) {
       await loadProperties();
       updateCount();
       showApp();
+      subscribeToSharedProperties();
       navigate("dashboard");
     } catch (error) {
       state.sessionUserId = null;
@@ -810,6 +824,42 @@ async function activateSession(session) {
     }
   })();
   return state.sessionLoadPromise;
+}
+
+function subscribeToSharedProperties() {
+  if (state.realtimeChannel) return;
+  state.realtimeChannel = state.supabase
+    .channel("depas-properties")
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "properties",
+    }, () => refreshSharedProperties())
+    .subscribe((status) => {
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        showNotice("No se pudo activar la actualización en vivo. Recarguen la página para ver cambios recientes.", "error");
+      }
+    });
+}
+
+async function refreshSharedProperties() {
+  if (state.remoteRefreshPromise) return state.remoteRefreshPromise;
+  state.remoteRefreshPromise = (async () => {
+    try {
+      await loadProperties();
+      updateCount();
+      if (state.view === "form" || state.view === "voting") {
+        showNotice("La lista compartida cambió. Vuelvan al catálogo o a calificar para ver la versión actualizada.");
+      } else {
+        renderCurrentView();
+      }
+    } catch (error) {
+      showNotice(`No se pudo actualizar la lista compartida: ${error.message}`, "error");
+    } finally {
+      state.remoteRefreshPromise = null;
+    }
+  })();
+  return state.remoteRefreshPromise;
 }
 
 async function initialize() {
@@ -823,7 +873,7 @@ async function initialize() {
   const hasSupabaseUrl = Boolean(config.supabaseUrl);
   const hasSupabaseKey = Boolean(config.supabaseAnonKey);
 
-  if (!hasSupabaseUrl && !hasSupabaseKey) {
+  if (!config.sharedMode && !hasSupabaseUrl && !hasSupabaseKey) {
     try {
       await loadProperties();
     } catch (error) {
@@ -841,8 +891,10 @@ async function initialize() {
     showAuthScreen("Falta configurar la URL o la clave pública de Supabase en los secretos de GitHub Actions.");
     return;
   }
-  if (!window.supabase?.createClient) {
-    showAuthScreen("No se pudo cargar la conexión segura. Revisen su conexión e inténtenlo de nuevo.");
+  try {
+    await loadSupabaseLibrary();
+  } catch (error) {
+    showAuthScreen(`No se pudo cargar la conexión segura: ${error.message}`);
     return;
   }
 
@@ -852,6 +904,10 @@ async function initialize() {
       if (session) {
         window.setTimeout(() => activateSession(session), 0);
       } else {
+        if (state.realtimeChannel) {
+          state.supabase.removeChannel(state.realtimeChannel);
+          state.realtimeChannel = null;
+        }
         state.sessionUserId = null;
         state.sessionLoadPromise = null;
         state.properties = [];

@@ -51,7 +51,7 @@ begin
 
   if exists (
     select 1
-    from jsonb_array_elements(p_properties) as item
+    from jsonb_array_elements(p_properties) as entries(item)
     where jsonb_typeof(item) is distinct from 'object'
        or item ->> 'id' is null
   ) then
@@ -62,9 +62,23 @@ begin
 
   insert into public.properties (id, data, updated_at)
   select (item ->> 'id')::uuid, item, now()
-  from jsonb_array_elements(p_properties) as item;
+  from jsonb_array_elements(p_properties) as entries(item);
 end;
 $$;
 
 revoke all on function public.replace_all_properties(jsonb) from public;
 grant execute on function public.replace_all_properties(jsonb) to authenticated;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'properties'
+  ) then
+    alter publication supabase_realtime add table public.properties;
+  end if;
+end;
+$$;

@@ -32,7 +32,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          node -e 'const fs = require("node:fs"); const config = { supabaseUrl: process.env.SUPABASE_URL || "", supabaseAnonKey: process.env.SUPABASE_ANON_KEY || "" }; fs.writeFileSync("config.js", `window.DEPAS_CONFIG = ${JSON.stringify(config)};\n`);'
+          node -e 'const fs = require("node:fs"); const config = { sharedMode: true, supabaseUrl: process.env.SUPABASE_URL || "", supabaseAnonKey: process.env.SUPABASE_ANON_KEY || "" }; fs.writeFileSync("config.js", `window.DEPAS_CONFIG = ${JSON.stringify(config)};\n`);'
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
