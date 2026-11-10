@@ -10,20 +10,15 @@
     <script src="app.js" defer></script>
   </head>
   <body>
-    <section class="auth-screen" id="auth-screen" hidden>
-      <div class="auth-card">
+    <section class="setup-screen" id="setup-screen" hidden>
+      <div class="setup-card">
         <a class="brand" href="#" aria-label="Depas">
           <span class="brand-mark">D</span>
           <span>depas<span class="brand-period">.</span></span>
         </a>
         <p class="eyebrow">SU BÚSQUEDA COMPARTIDA</p>
         <h1>Un hogar, dos opiniones.</h1>
-        <p class="auth-copy" id="auth-message">Inicien sesión con un correo autorizado para ver y actualizar la lista compartida.</p>
-        <form id="auth-form">
-          <label class="field-label">Correo electrónico<input name="email" type="email" autocomplete="email" required placeholder="ustedes@correo.com"></label>
-          <button class="button button-primary button-full" type="submit">Enviar enlace de acceso <span>→</span></button>
-        </form>
-        <p class="auth-footnote">Solo las cuentas autorizadas pueden consultar o editar los inmuebles.</p>
+        <p class="setup-copy" id="setup-message"></p>
       </div>
     </section>
     <div class="app-shell" id="app-shell" hidden>
@@ -57,7 +52,6 @@
             <label class="button button-quiet import-button" for="import-file">Importar JSON</label>
             <input id="import-file" type="file" accept="application/json,.json" hidden>
             <button class="button button-quiet" id="export-button" type="button">Exportar JSON <span aria-hidden="true">↓</span></button>
-            <button class="button button-quiet" id="logout-button" type="button" hidden>Cerrar sesión</button>
             <button class="button button-primary button-small" data-view="form" type="button"><span>＋</span> Agregar depa</button>
           </div>
         </header>

@@ -1,9 +1,3 @@
-create table if not exists public.allowed_users (
-  email text primary key
-);
-
-alter table public.allowed_users enable row level security;
-
 create table if not exists public.properties (
   id uuid primary key,
   data jsonb not null,
@@ -11,32 +5,21 @@ create table if not exists public.properties (
 );
 
 alter table public.properties enable row level security;
-grant select, insert, update, delete on public.properties to authenticated;
-
-create or replace function public.is_depas_user()
-returns boolean
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select exists (
-    select 1
-    from public.allowed_users
-    where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
-  );
-$$;
-
-revoke all on function public.is_depas_user() from public;
-grant execute on function public.is_depas_user() to authenticated;
 
 drop policy if exists "depas_users_can_access_properties" on public.properties;
-create policy "depas_users_can_access_properties"
+drop policy if exists "public_access_properties" on public.properties;
+drop function if exists public.is_depas_user();
+drop table if exists public.allowed_users;
+
+revoke all on public.properties from authenticated;
+grant select, insert, update, delete on public.properties to anon;
+
+create policy "public_access_properties"
 on public.properties
 for all
-to authenticated
-using ((select public.is_depas_user()))
-with check ((select public.is_depas_user()));
+to anon
+using (true)
+with check (true);
 
 create or replace function public.replace_all_properties(p_properties jsonb)
 returns void
@@ -67,7 +50,8 @@ end;
 $$;
 
 revoke all on function public.replace_all_properties(jsonb) from public;
-grant execute on function public.replace_all_properties(jsonb) to authenticated;
+revoke all on function public.replace_all_properties(jsonb) from authenticated;
+grant execute on function public.replace_all_properties(jsonb) to anon;
 
 do $$
 begin

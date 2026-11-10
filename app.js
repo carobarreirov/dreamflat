@@ -37,16 +37,12 @@ const VIEW_LABELS = {
 const root = document.querySelector("#view-root");
 const notice = document.querySelector("#notice");
 const appShell = document.querySelector("#app-shell");
-const authScreen = document.querySelector("#auth-screen");
-const authForm = document.querySelector("#auth-form");
-const authMessage = document.querySelector("#auth-message");
+const setupScreen = document.querySelector("#setup-screen");
+const setupMessage = document.querySelector("#setup-message");
 const state = {
   properties: [],
   postalCodes: [],
   supabase: null,
-  remoteMode: false,
-  sessionUserId: null,
-  sessionLoadPromise: null,
   realtimeChannel: null,
   remoteRefreshPromise: null,
   view: "dashboard",
@@ -178,8 +174,8 @@ function renderDashboard() {
 
   root.innerHTML = `
     <section class="page-heading">
-      <div><p class="eyebrow">SU BÚSQUEDA EN UN SOLO LUGAR</p><h1>Hola, Benja y Caro <span>✳</span></h1>
-      <p class="heading-copy">Una decisión importante, vista desde los dos lados.</p></div>
+      <div><h1>Hola, Benja y Caro <span>✳</span></h1>
+      </div>
       <button class="button button-primary" data-view="form" type="button">＋ Agregar un inmueble</button>
     </section>
     <section class="stats-grid" aria-label="Resumen de la búsqueda">
@@ -189,15 +185,15 @@ function renderDashboard() {
     </section>
     <section class="dashboard-columns">
       <div class="content-panel">
-        <div class="section-title"><div><p class="eyebrow">SELECCIÓN DEL EQUIPO</p><h2>Los mejor calificados</h2></div><button class="text-link" data-view="top" type="button">Ver ranking →</button></div>
+        <div class="section-title"><div><h2>Los mejor calificados</h2></div><button class="text-link" data-view="top" type="button">Ver ranking →</button></div>
         ${top.length ? `<div class="compact-card-list">${top.map((property) => renderPropertyCard(property, true)).join("")}</div>` : `<div class="empty-inline"><span class="empty-icon">✳</span><strong>Su top 3 empieza aquí</strong><span>Califiquen sus opciones después de una visita.</span><button class="text-link" data-view="catalog" type="button">Explorar inmuebles →</button></div>`}
       </div>
       <aside class="content-panel followup-panel">
-        <div class="section-title"><div><p class="eyebrow">PARA NO PERDER EL HILO</p><h2>Próximos pasos</h2></div></div>
+        <div class="section-title"><div><h2>Próximos pasos</h2></div></div>
         ${next.length ? `<ul class="followup-list">${next.map((property) => `<li><span class="followup-dot"></span><div><strong>${escapeHTML(property.name)}</strong><small>${escapeHTML(property.followUp)}</small></div><button class="icon-button" data-action="edit" data-id="${escapeHTML(property.id)}" aria-label="Editar próximo paso" type="button">↗</button></li>`).join("")}</ul>` : `<div class="empty-followup"><span>◷</span><p>Aquí aparecerán sus llamadas, visitas y pendientes.</p><button class="text-link" data-view="catalog" type="button">Ver catálogo →</button></div>`}
       </aside>
     </section>
-    <section class="bottom-callout"><span class="callout-spark">✳</span><div><strong>¿Un nuevo prospecto?</strong><p>Guarden precio, ubicación y todos los detalles antes de que se pierdan.</p></div><button class="button button-outline" data-view="form" type="button">Agregar depa <span>→</span></button></section>`;
+    <section class="bottom-callout"><span class="callout-spark">✳</span><div><strong>¿Un nuevo prospecto?</strong></div><button class="button button-outline" data-view="form" type="button">Agregar depa <span>→</span></button></section>`;
 }
 
 function filterProperties(properties) {
@@ -451,9 +447,9 @@ function renderPropertyForm(property = null) {
       <section class="content-panel form-section"><div class="form-section-heading"><span>01</span><div><h2>Lo esencial</h2><p>¿Qué inmueble encontraron?</p></div></div>
         <div class="form-grid">
           <label class="field-label field-span-2">Nombre para identificarlo<input name="name" required maxlength="80" value="${value("name")}" placeholder="Ej. Depa luminoso en la Roma"></label>
-          <label class="field-label">Código postal<input name="cp" id="property-cp" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" required value="${value("cp")}" placeholder="06700"><small>Escribe 5 dígitos para sugerir colonia y alcaldía.</small></label>
+          <label class="field-label">Código postal<input name="cp" id="property-cp" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" value="${value("cp")}" placeholder="06700"><small>Opcional. Escribe 5 dígitos para sugerir colonia y alcaldía.</small></label>
           <label class="field-label">Alcaldía<select name="alcaldia" id="property-alcaldia" required>${alcaldiaOptions(property?.alcaldia || "")}</select></label>
-          <label class="field-label">Colonia<input name="colonia" id="property-colonia" list="colonia-options" required value="${value("colonia")}" placeholder="Selecciona o escribe una colonia"><datalist id="colonia-options"></datalist></label>
+          <label class="field-label">Colonia<input name="colonia" id="property-colonia" required value="${value("colonia")}" placeholder="Escribe una colonia"><select id="colonia-options" aria-label="Colonias sugeridas para el código postal" hidden><option value="">Seleccionar colonia sugerida</option></select></label>
           <label class="field-label">Dirección o referencia<input name="addressRef" maxlength="180" value="${value("addressRef")}" placeholder="Calle, cruce o referencia"></label>
           <label class="field-label field-span-2">Enlace al anuncio<input name="adUrl" type="url" value="${value("adUrl")}" placeholder="https://..."></label>
         </div>
@@ -488,31 +484,36 @@ function renderPropertyForm(property = null) {
       <div class="form-footer"><span>Las calificaciones de Benja y Caro se guardan desde la vista Calificar.</span><div><button class="button button-quiet" data-view="catalog" type="button">Cancelar</button><button class="button button-primary" type="submit">${property ? "Guardar cambios" : "Guardar inmueble"} <span>→</span></button></div></div>
     </form>`;
   const cpInput = root.querySelector("#property-cp");
-  const datalist = root.querySelector("#colonia-options");
+  const colonyOptions = root.querySelector("#colonia-options");
   const alcaldiaInput = root.querySelector("#property-alcaldia");
   const colonyInput = root.querySelector("#property-colonia");
-  const fillPostalOptions = () => {
+  const fillPostalOptions = (showMessage = true) => {
     const cp = cpInput.value.trim();
-    if (!/^\d{5}$/.test(cp)) return;
+    if (!/^\d{5}$/.test(cp)) {
+      colonyOptions.hidden = true;
+      colonyOptions.replaceChildren();
+      return;
+    }
     const match = state.postalCodes.find((record) => record.cp === cp);
     if (!match) {
-      datalist.replaceChildren();
-      showNotice("Ese CP no está en el catálogo local. Completen alcaldía y colonia manualmente.", "info");
+      colonyOptions.hidden = true;
+      colonyOptions.replaceChildren();
+      if (showMessage) showNotice("Ese CP no está en el catálogo local. Completen alcaldía y colonia manualmente.", "info");
       return;
     }
     alcaldiaInput.value = match.alcaldia;
-    datalist.innerHTML = match.colonias.map((colony) => `<option value="${escapeHTML(colony)}"></option>`).join("");
-    if (match.colonias.length === 1) colonyInput.value = match.colonias[0];
-    showNotice(`${match.colonias.length} ${match.colonias.length === 1 ? "colonia sugerida" : "colonias sugeridas"} para ${cp}.`, "success");
+    colonyOptions.innerHTML = `<option value="">Seleccionar colonia sugerida</option>${match.colonias.map((colony) => `<option value="${escapeHTML(colony)}">${escapeHTML(colony)}</option>`).join("")}`;
+    colonyOptions.hidden = false;
+    if (match.colonias.includes(colonyInput.value)) colonyOptions.value = colonyInput.value;
+    if (showMessage && match.colonias.length === 1) colonyInput.value = match.colonias[0];
+    if (showMessage) showNotice(`${match.colonias.length} ${match.colonias.length === 1 ? "colonia sugerida" : "colonias sugeridas"} para ${cp}.`, "success");
   };
-  cpInput.addEventListener("input", () => {
-    if (cpInput.value.length === 5) fillPostalOptions();
-  });
+  cpInput.addEventListener("input", () => fillPostalOptions(cpInput.value.length === 5));
   cpInput.addEventListener("change", fillPostalOptions);
-  if (property?.cp) {
-    const match = state.postalCodes.find((record) => record.cp === property.cp);
-    if (match) datalist.innerHTML = match.colonias.map((colony) => `<option value="${escapeHTML(colony)}"></option>`).join("");
-  }
+  colonyOptions.addEventListener("change", () => {
+    if (colonyOptions.value) colonyInput.value = colonyOptions.value;
+  });
+  if (property?.cp) fillPostalOptions(false);
   root.querySelector("#property-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -761,69 +762,15 @@ document.querySelector("#import-file").addEventListener("change", (event) => {
   if (file) importProperties(file);
   event.target.value = "";
 });
-document.querySelector("#logout-button").addEventListener("click", async () => {
-  const { error } = await state.supabase.auth.signOut();
-  if (error) showNotice(`No se pudo cerrar la sesión: ${error.message}`, "error");
-});
-authForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (!state.supabase) {
-    showAuthScreen("La conexión segura aún no está configurada. Revisen la publicación de GitHub Pages.");
-    return;
-  }
-  const email = new FormData(authForm).get("email");
-  const { error } = await state.supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.href },
-  });
-  if (error) {
-    showAuthScreen(`No se pudo enviar el enlace: ${error.message}`);
-    return;
-  }
-  showAuthScreen("Les enviamos un enlace de acceso al correo. Ábranlo en este dispositivo para entrar.");
-});
-
-function showAuthScreen(message) {
+function showSetupScreen(message) {
   appShell.hidden = true;
-  authScreen.hidden = false;
-  authMessage.textContent = message;
-  authForm.hidden = !state.supabase;
+  setupScreen.hidden = false;
+  setupMessage.textContent = message;
 }
 
 function showApp() {
-  authScreen.hidden = true;
+  setupScreen.hidden = true;
   appShell.hidden = false;
-  document.querySelector("#logout-button").hidden = !state.remoteMode;
-}
-
-async function activateSession(session) {
-  if (state.sessionUserId === session.user.id && state.sessionLoadPromise) {
-    return state.sessionLoadPromise;
-  }
-  state.sessionUserId = session.user.id;
-  state.sessionLoadPromise = (async () => {
-    try {
-      const { data: isAllowed, error: accessError } = await state.supabase.rpc("is_depas_user");
-      if (accessError) throw accessError;
-      if (isAllowed !== true) {
-        await state.supabase.auth.signOut();
-        state.sessionUserId = null;
-        state.sessionLoadPromise = null;
-        showAuthScreen("Este correo todavía no tiene acceso. Pídanle a quien administra la lista que lo autorice.");
-        return;
-      }
-      await loadProperties();
-      updateCount();
-      showApp();
-      subscribeToSharedProperties();
-      navigate("dashboard");
-    } catch (error) {
-      state.sessionUserId = null;
-      state.sessionLoadPromise = null;
-      showAuthScreen(`No se pudo cargar la lista compartida: ${error.message}`);
-    }
-  })();
-  return state.sessionLoadPromise;
 }
 
 function subscribeToSharedProperties() {
@@ -877,7 +824,7 @@ async function initialize() {
     try {
       await loadProperties();
     } catch (error) {
-      showAuthScreen(`${error.message} Abran la página desde un servidor local (ver README).`);
+      showSetupScreen(`${error.message} Abran la página desde un servidor local (ver README).`);
       return;
     }
     showApp();
@@ -886,44 +833,28 @@ async function initialize() {
     return;
   }
 
-  state.remoteMode = true;
   if (!hasSupabaseUrl || !hasSupabaseKey) {
-    showAuthScreen("Falta configurar la URL o la clave pública de Supabase en los secretos de GitHub Actions.");
+    showSetupScreen("Falta configurar la URL y la clave pública de Supabase en config.js.");
     return;
   }
   try {
     await loadSupabaseLibrary();
   } catch (error) {
-    showAuthScreen(`No se pudo cargar la conexión segura: ${error.message}`);
+    showSetupScreen(`No se pudo cargar la conexión con Supabase: ${error.message}`);
     return;
   }
 
   try {
-    state.supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
-    state.supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        window.setTimeout(() => activateSession(session), 0);
-      } else {
-        if (state.realtimeChannel) {
-          state.supabase.removeChannel(state.realtimeChannel);
-          state.realtimeChannel = null;
-        }
-        state.sessionUserId = null;
-        state.sessionLoadPromise = null;
-        state.properties = [];
-        updateCount();
-        showAuthScreen("Inicien sesión con un correo autorizado para ver y actualizar la lista compartida.");
-      }
+    state.supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
-    const { data, error } = await state.supabase.auth.getSession();
-    if (error) throw error;
-    if (data.session) {
-      await activateSession(data.session);
-    } else {
-      showAuthScreen("Inicien sesión con un correo autorizado para ver y actualizar la lista compartida.");
-    }
+    await loadProperties();
+    updateCount();
+    showApp();
+    subscribeToSharedProperties();
+    navigate("dashboard");
   } catch (error) {
-    showAuthScreen(`No se pudo conectar con Supabase: ${error.message}`);
+    showSetupScreen(`No se pudo conectar con Supabase: ${error.message}`);
   }
 }
 
